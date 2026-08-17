@@ -306,7 +306,7 @@
       <button class="export-btn" id="shareReportBtn" style="background:#34c759;flex:1;color:#fff;" onclick="shareReport()">📤 傳送報告（LINE／Email／隔空投送）</button>
       <button class="export-btn" id="redownloadReportBtn" style="flex:1;" onclick="redownloadReport()">⬇️ 再次下載</button>
     </div>
-    <div style="font-size:12px;color:#86868b;margin:8px 2px 12px;line-height:1.6;">💡 小提醒：「產出日巡報告」按下去就直接產生 Excel 檔（.xlsx），不用先按「匯出資料包」。手機沒裝 Excel/WPS 時會把 .xlsx 看成壓縮檔，那是正常現象，用上面的「📤 傳送報告」把檔直接傳出去就對了。</div>
+    <div style="font-size:12px;color:#86868b;margin:8px 2px 12px;line-height:1.6;">💡 小提醒：「產出日巡報告」按下去就直接產生 Excel 檔，檔名尾巴是 .xlsx（例如 ABC_設備維護報告_20260817.xlsx）。它會在手機的「下載資料夾」裡，沒裝 Excel/WPS 時看起來像壓縮檔是正常現象——認名字就好，選尾巴是 .xlsx 的那一個。</div>
 
     <footer>pwa-v6</footer>
   </div>
@@ -1717,7 +1717,7 @@ function generateReportV8() {
       var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
       var code = _restaurant ? _restaurant.code : 'UNKN';
       var ds = new Date().toISOString().slice(0,10).replace(/-/g,'');
-      var name = code + '_設備維護_' + ds + '.xlsx';
+      var name = code + '_設備維護報告_' + ds + '.xlsx';
       _v8ReportBlob = blob;
       _v8ReportName = name;
       try { _v8ReportFile = new File([blob], name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); } catch(e) { _v8ReportFile = null; }
@@ -1764,11 +1764,17 @@ function v8ShowReportShare() {
   box.style.display = 'flex';
 }
 function shareReport() {
-  if (!_v8ReportFile) { redownloadReport(); return; }
-  if (!navigator.share || !navigator.canShare || !navigator.canShare({ files: [_v8ReportFile] })) { redownloadReport(); return; }
+  if (!_v8ReportFile) { v8ShareUnsupported(); return; }
+  if (!navigator.share || !navigator.canShare || !navigator.canShare({ files: [_v8ReportFile] })) { v8ShareUnsupported(); return; }
   var name = _v8ReportName || '日巡報告.xlsx';
   navigator.share({ title: name, files: [_v8ReportFile] })
-    .catch(function(e){ /* 使用者取消或分享失敗：忽略，仍可再次下載 */ });
+    .catch(function(e){ if (e && e.name === 'AbortError') { return; } v8ShareUnsupported(); });
+}
+function v8ShareUnsupported() {
+  var rs = document.getElementById('reportStatus');
+  if (!rs) return;
+  rs.style.color = '#b7791f'; rs.style.background = '#fffbeb';
+  rs.textContent = '這支手機的瀏覽器不支援「按鈕直接分享」。請到手機的「下載資料夾」找檔名『' + _v8ReportName + '』（尾巴是 .xlsx，不是 .zip），長按它選「分享」→ LINE／Email 就能傳出去。';
 }
 function redownloadReport() {
   if (!_v8ReportBlob || !_v8ReportName) return;
