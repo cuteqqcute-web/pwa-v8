@@ -1714,7 +1714,7 @@ function generateReportV8() {
       if (classifiedCount === 0) throw new Error('沒有已分類的照片，無法產出報告');
       var tplBytes = v8B64ToArrayBuffer(V8_TEMPLATE_B64);
       var zip = await v8rGenerateReportZip(tplBytes, byEquip);
-      var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       var code = _restaurant ? _restaurant.code : 'UNKN';
       var ds = new Date().toISOString().slice(0,10).replace(/-/g,'');
       var name = code + '_設備維護報告_' + ds + '.xlsx';
