@@ -302,6 +302,11 @@
       <button class="export-btn" id="generateReportBtn" style="background:#ff9500;flex:1;">📊 產出日巡報告</button>
     </div>
     <div class="report-status" id="reportStatus"></div>
+    <div class="export-actions" id="reportShareBox" style="display:none;margin-top:10px;">
+      <button class="export-btn" id="shareReportBtn" style="background:#34c759;flex:1;color:#fff;" onclick="shareReport()">📤 傳送報告（LINE／Email／隔空投送）</button>
+      <button class="export-btn" id="redownloadReportBtn" style="flex:1;" onclick="redownloadReport()">⬇️ 再次下載</button>
+    </div>
+    <div style="font-size:12px;color:#86868b;margin:8px 2px 12px;line-height:1.6;">💡 小提醒：「產出日巡報告」按下去就直接產生 Excel 檔（.xlsx），不用先按「匯出資料包」。手機沒裝 Excel/WPS 時會把 .xlsx 看成壓縮檔，那是正常現象，用上面的「📤 傳送報告」把檔直接傳出去就對了。</div>
 
     <footer>pwa-v6</footer>
   </div>
@@ -1224,6 +1229,8 @@ function saveToAlbum() {
 // ============================================================
 function generateReport() {
   var rs = document.getElementById('reportStatus');
+  var sb = document.getElementById('reportShareBox');
+  if (sb) sb.style.display = 'none';
   rs.style.display = 'block';
   rs.style.color = '#b7791f';
   rs.style.background = '#fffbeb';
@@ -1711,9 +1718,13 @@ function generateReportV8() {
       var code = _restaurant ? _restaurant.code : 'UNKN';
       var ds = new Date().toISOString().slice(0,10).replace(/-/g,'');
       var name = code + '_設備維護_' + ds + '.xlsx';
-      var url = URL.createObjectURL(blob);
+      _v8ReportBlob = blob;
+      _v8ReportName = name;
+      try { _v8ReportFile = new File([blob], name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); } catch(e) { _v8ReportFile = null; }
       rs.style.color = '#34c759'; rs.style.background = '#f0fff4';
-      rs.textContent = '✅ 報告已產生！正在下載...';
+      rs.textContent = '✅ 報告已產生！檔名：' + name;
+      v8ShowReportShare();
+      var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url; a.download = name;
       document.body.appendChild(a); a.click(); a.remove();
@@ -1742,6 +1753,31 @@ function resetReportBtn() {
   btn.textContent = '📊 產出日巡報告';
 }
 
+// 常駐：最近產出的報告（供「傳送」與「再次下載」使用）
+var _v8ReportBlob = null, _v8ReportName = '', _v8ReportFile = null;
+function v8ShowReportShare() {
+  var box = document.getElementById('reportShareBox');
+  if (!box) return;
+  var shareBtn = document.getElementById('shareReportBtn');
+  var canShare = !!(navigator.share && navigator.canShare && _v8ReportFile && navigator.canShare({ files: [_v8ReportFile] }));
+  if (shareBtn) shareBtn.style.display = canShare ? '' : 'none';
+  box.style.display = 'flex';
+}
+function shareReport() {
+  if (!_v8ReportFile) { redownloadReport(); return; }
+  if (!navigator.share || !navigator.canShare || !navigator.canShare({ files: [_v8ReportFile] })) { redownloadReport(); return; }
+  var name = _v8ReportName || '日巡報告.xlsx';
+  navigator.share({ title: name, files: [_v8ReportFile] })
+    .catch(function(e){ /* 使用者取消或分享失敗：忽略，仍可再次下載 */ });
+}
+function redownloadReport() {
+  if (!_v8ReportBlob || !_v8ReportName) return;
+  var url = URL.createObjectURL(_v8ReportBlob);
+  var a = document.createElement('a');
+  a.href = url; a.download = _v8ReportName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+}
 var _beepAudio = null;
 // 完成提示音（內嵌 WAV 播放，手機全音量；另加震動輔助）
 function beep() {
